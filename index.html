@@ -424,7 +424,47 @@ function applyFilters() {
     if (name   && !r.name.toLowerCase().includes(name)) return false;
     return true;
   });
+window.addEventListener('DOMContentLoaded', (event) => {
+    // 1. Get the parameters from the URL (e.g., ?agency=Alpha&group=G1)
+    const urlParams = new URLSearchParams(window.location.search);
+    const agencyParam = urlParams.get('agency');
+    const groupParam = urlParams.get('group');
 
+    // 2. Find your filter elements (Update these IDs if they are different in your HTML)
+    const agencySelect = document.getElementById('agency-filter') || document.querySelector('select[name="agency"]');
+    const groupSelect = document.getElementById('group-filter') || document.querySelector('select[name="group"]');
+
+    if (agencyParam || groupParam) {
+        // Set the Agency filter if provided
+        if (agencyParam && agencySelect) {
+            agencySelect.value = agencyParam;
+            // Hide the filter so they can't change it
+            agencySelect.parentElement.style.display = 'none'; 
+        }
+
+        // Set the Group filter if provided
+        if (groupParam && groupSelect) {
+            groupSelect.value = groupParam;
+            // Hide the filter so they can't change it
+            groupSelect.parentElement.style.display = 'none';
+        }
+
+        // 3. Trigger the filter function manually
+        // Note: Replace 'updateTable' with the name of your filtering function
+        if (typeof updateTable === "function") {
+            updateTable(); 
+        } else {
+            // If you use a standard 'change' event listener, trigger it:
+            agencySelect.dispatchEvent(new Event('change'));
+        }
+        
+        // Optional: Update the header to show which agency is being viewed
+        const header = document.querySelector('h1');
+        if (header && agencyParam) {
+            header.innerText += ` - ${agencyParam}`;
+        }
+    }
+});
   buildBody(filtered);
 }
 
