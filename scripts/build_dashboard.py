@@ -135,14 +135,15 @@ def extract_name_agency(response, field_map):
         field_id = ans.get("field", {}).get("id", "")
         title = field_map.get(field_id, "").lower()
         atype = ans.get("type", "")
-        if "name" in title:
-            if atype == "text":
-                name = (ans.get("text") or "").strip()
+        # Check agency FIRST — title like "What is the name of your agency?" also contains "name"
         if "agency" in title or "rep " in title or "company" in title:
             if atype == "choice":
                 agency = ans.get("choice", {}).get("label", "").strip()
             elif atype == "text":
                 agency = (ans.get("text") or "").strip()
+        elif "name" in title:
+            if atype == "text":
+                name = (ans.get("text") or "").strip()
     return name, agency
 
 def norm_name(n):
