@@ -89,6 +89,26 @@ AGENCY_ALIASES = {
 def tf_headers():
     return {"Authorization": f"Bearer {TYPEFORM_TOKEN}"}
 
+def get_field_map(form_id):
+    """Fetch form definition and return {field_id: title} mapping."""
+    r = requests.get(f"https://api.typeform.com/forms/{form_id}",
+                     headers=tf_headers(), timeout=30)
+    if r.status_code != 200:
+        return {}
+    data = r.json()
+    field_map = {}
+    for field in data.get("fields", []):
+        fid = field.get("id")
+        title = field.get("title", "")
+        if fid:
+            field_map[fid] = title
+        # Also handle fields inside groups
+        for sub in field.get("properties", {}).get("fields", []):
+            sid = sub.get("id")
+            if sid:
+                field_map[sid] = sub.get("title", "")
+    return field_map
+
 def get_form_responses(form_id):
     url = f"https://api.typeform.com/forms/{form_id}/responses"
     items = []
@@ -109,29 +129,16 @@ def get_form_responses(form_id):
         before = batch[-1]["token"]
     return items
 
-def debug_first_response(form_id):
-    """Print field titles from first response to diagnose parsing issues."""
-    r = requests.get(f"https://api.typeform.com/forms/{form_id}/responses",
-                     headers=tf_headers(), params={"page_size": 1, "completed": "true"}, timeout=30)
-    data = r.json()
-    items = data.get("items", [])
-    if not items:
-        print("  (no responses)")
-        return
-    print("  Field titles in first response:")
-    for ans in items[0].get("answers", []):
-        field = ans.get("field", {})
-        print(f"    type={ans.get('type')!r:15} title={field.get('title')!r}")
-
-def extract_name_agency(response):
+def extract_name_agency(response, field_map):
     name = agency = None
     for ans in response.get("answers", []):
-        title = ans.get("field", {}).get("title", "").lower()
+        field_id = ans.get("field", {}).get("id", "")
+        title = field_map.get(field_id, "").lower()
         atype = ans.get("type", "")
         if "name" in title:
             if atype == "text":
                 name = (ans.get("text") or "").strip()
-        elif "agency" in title or "rep " in title or "company" in title:
+        if "agency" in title or "rep " in title or "company" in title:
             if atype == "choice":
                 agency = ans.get("choice", {}).get("label", "").strip()
             elif atype == "text":
@@ -151,14 +158,17 @@ def build_rows():
         training = mapping["training"]
         form_group = mapping["group"]
         print(f"  Fetching {form_id}: {training} (G{form_group})")
+        field_map = get_field_map(form_id)
         responses = get_form_responses(form_id)
         print(f"    → {len(responses)} responses")
-        if not debug_done and responses:
-            print(f"  DEBUG field titles for {form_id}:")
-            debug_first_response(form_id)
+
+        # Debug: print field map for first form only
+        if not debug_done:
+            print(f"  DEBUG field_map for {form_id}: {field_map}")
             debug_done = True
+
         for resp in responses:
-            name, agency = extract_name_agency(resp)
+            name, agency = extract_name_agency(resp, field_map)
             if not name:
                 continue
             nn = norm_name(name)
