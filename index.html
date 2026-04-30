@@ -424,47 +424,7 @@ function applyFilters() {
     if (name   && !r.name.toLowerCase().includes(name)) return false;
     return true;
   });
-window.addEventListener('DOMContentLoaded', (event) => {
-    // 1. Get the parameters from the URL (e.g., ?agency=Alpha&group=G1)
-    const urlParams = new URLSearchParams(window.location.search);
-    const agencyParam = urlParams.get('agency');
-    const groupParam = urlParams.get('group');
 
-    // 2. Find your filter elements (Update these IDs if they are different in your HTML)
-    const agencySelect = document.getElementById('agency-filter') || document.querySelector('select[name="agency"]');
-    const groupSelect = document.getElementById('group-filter') || document.querySelector('select[name="group"]');
-
-    if (agencyParam || groupParam) {
-        // Set the Agency filter if provided
-        if (agencyParam && agencySelect) {
-            agencySelect.value = agencyParam;
-            // Hide the filter so they can't change it
-            agencySelect.parentElement.style.display = 'none'; 
-        }
-
-        // Set the Group filter if provided
-        if (groupParam && groupSelect) {
-            groupSelect.value = groupParam;
-            // Hide the filter so they can't change it
-            groupSelect.parentElement.style.display = 'none';
-        }
-
-        // 3. Trigger the filter function manually
-        // Note: Replace 'updateTable' with the name of your filtering function
-        if (typeof updateTable === "function") {
-            updateTable(); 
-        } else {
-            // If you use a standard 'change' event listener, trigger it:
-            agencySelect.dispatchEvent(new Event('change'));
-        }
-        
-        // Optional: Update the header to show which agency is being viewed
-        const header = document.querySelector('h1');
-        if (header && agencyParam) {
-            header.innerText += ` - ${agencyParam}`;
-        }
-    }
-});
   buildBody(filtered);
 }
 
@@ -475,11 +435,48 @@ function resetFilters() {
   buildBody(ROWS);
 }
 
+// ── Agency lock (URL param ?agency=AgencyName) ─────────────────────────────
+const _urlAgency = new URLSearchParams(window.location.search).get('agency');
+
 // ── Init ──────────────────────────────────────────────────────────────────
 buildCards();
 buildHead();
 populateAgencyFilter();
-buildBody(ROWS);
+
+if (_urlAgency) {
+  // Update page title to show agency name
+  document.title = _urlAgency + ' — Training Matrix';
+  const titleEl = document.querySelector('.topbar h1');
+  if (titleEl) titleEl.textContent = _urlAgency + ' — Agency Training Matrix';
+
+  // Hide the agency filter row (they can only see their own agency)
+  const filtersDiv = document.querySelector('.filters');
+  const agencyLabel = filtersDiv.querySelector('label');
+  const agencySelect = document.getElementById('filterAgency');
+  agencyLabel.style.display = 'none';
+  agencySelect.style.display = 'none';
+
+  // Filter rows to this agency only
+  const filtered = ROWS.filter(r => r.agency === _urlAgency);
+  buildBody(filtered);
+
+  // Recompute summary cards for this agency only
+  const totalPeople = filtered.length;
+  const totalSessions = TRAININGS.length * totalPeople;
+  const attended = filtered.reduce((s, r) => s + r.attended.length, 0);
+  const pct = totalPeople ? Math.round(attended / totalSessions * 100) : 0;
+  const g1 = filtered.filter(r => r.group === 1).length;
+  const g2 = filtered.filter(r => r.group === 2).length;
+  document.getElementById('summaryCards').innerHTML = `
+    <div class="card"><div class="num">${totalPeople}</div><div class="lbl">Participants</div></div>
+    <div class="card"><div class="num">${TRAININGS.length}</div><div class="lbl">Trainings</div></div>
+    <div class="card"><div class="num" style="color:var(--g1-blue)">${g1}</div><div class="lbl">Group 1</div></div>
+    <div class="card"><div class="num" style="color:var(--g2-teal)">${g2}</div><div class="lbl">Group 2</div></div>
+    <div class="card"><div class="num" style="color:var(--green)">${pct}%</div><div class="lbl">Overall Completion</div></div>
+  `;
+} else {
+  buildBody(ROWS);
+}
 </script>
 </body>
 </html>
