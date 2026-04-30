@@ -3,18 +3,11 @@
 build_dashboard.py
 Fetches attendance data from all Typeform forms in the Flow Training Tracking
 workspace and regenerates index.html with up-to-date participant data.
-
 Required env var: TYPEFORM_TOKEN  (Typeform Personal Access Token)
 """
-
-import json
-import os
-import re
-import sys
-import requests
+import json, os, re, sys, requests
 from datetime import datetime, timezone
 
-# ── Config ────────────────────────────────────────────────────────────────────
 TYPEFORM_TOKEN = os.environ.get("TYPEFORM_TOKEN", "")
 if not TYPEFORM_TOKEN:
     sys.exit("ERROR: TYPEFORM_TOKEN environment variable not set")
@@ -30,85 +23,73 @@ TRAININGS = [
     "FLOW Wrap Up",
 ]
 
-# group=0 means "don't infer participant group from this form"
 FORM_MAPPING = {
-    "iCNBozco": {"training": "Salesforce",              "group": 1},
-    "NT7Zg1vr": {"training": "Tableau",                 "group": 1},
-    "SufacUmT": {"training": "Quoting",                 "group": 1},
-    "t5avrImy": {"training": "Success w/ Customers",    "group": 1},
-    "Nn3f31WT": {"training": "Pricing/RGAs",            "group": 1},
-    "Myx2B8oe": {"training": "Highspot 1",              "group": 1},
-    "VHAeAr9h": {"training": "Customer Care & BP",      "group": 1},
-    "SeK5serH": {"training": "AS Toilets",              "group": 1},
-    "FKMrX8yw": {"training": "DXV Product Overview",    "group": 1},
-    "BVrIec0k": {"training": "AS Faucets & Kitchen",    "group": 1},
-    "Fctkx22I": {"training": "AS Commercial 1",         "group": 1},
-    "FuCgh6Ct": {"training": "AS Commercial 2",         "group": 1},
-    "GXFHuHfI": {"training": "GROHE Showering",         "group": 1},
-    "y9bfjWHB": {"training": "GROHE Faucets & Ceramics","group": 1},
-    "SzDEPMlT": {"training": "GROHE Kitchen",           "group": 1},
-    "QwuEXi83": {"training": "Display Management",      "group": 1},
-    "JC3SSubG": {"training": "Concierge & Service",     "group": 1},
-    "LW0gk8zC": {"training": "Forecasting",             "group": 1},
-    "gMAvzoOI": {"training": "LIXIL Pro",               "group": 1},
-    "tGMZoIJK": {"training": "Highspot 2",              "group": 1},
-    "K39z6Tfi": {"training": "Adding Value to Showroom","group": 1},
-    "AXB6gX5C": {"training": "Salesforce",              "group": 2},
-    "YQ2HR43W": {"training": "Tableau",                 "group": 2},
-    "K1GKMBWa": {"training": "Quoting",                 "group": 2},
-    "fwTGsQbc": {"training": "Customer Care & BP",      "group": 2},
-    "OHOz9gSO": {"training": "Pricing/RGAs",            "group": 2},
-    "LjocCTQm": {"training": "Highspot 1",              "group": 2},
-    "oOl3VGUn": {"training": "AS Faucets & Kitchen",    "group": 2},
-    "ZJCKZanE": {"training": "AS Commercial 1",         "group": 2},
-    "tmhIYwwI": {"training": "AS Commercial 2",         "group": 2},
-    "hfg5g3bx": {"training": "AS Showering",            "group": 2},
+    "iCNBozco": {"training": "Salesforce",               "group": 1},
+    "NT7Zg1vr": {"training": "Tableau",                  "group": 1},
+    "SufacUmT": {"training": "Quoting",                  "group": 1},
+    "t5avrImy": {"training": "Success w/ Customers",     "group": 1},
+    "Nn3f31WT": {"training": "Pricing/RGAs",             "group": 1},
+    "Myx2B8oe": {"training": "Highspot 1",               "group": 1},
+    "VHAeAr9h": {"training": "Customer Care & BP",       "group": 1},
+    "SeK5serH": {"training": "AS Toilets",               "group": 1},
+    "FKMrX8yw": {"training": "DXV Product Overview",     "group": 1},
+    "BVrIec0k": {"training": "AS Faucets & Kitchen",     "group": 1},
+    "Fctkx22I": {"training": "AS Commercial 1",          "group": 1},
+    "FuCgh6Ct": {"training": "AS Commercial 2",          "group": 1},
+    "GXFHuHfI": {"training": "GROHE Showering",          "group": 1},
+    "y9bfjWHB": {"training": "GROHE Faucets & Ceramics", "group": 1},
+    "SzDEPMlT": {"training": "GROHE Kitchen",            "group": 1},
+    "QwuEXi83": {"training": "Display Management",       "group": 1},
+    "JC3SSubG": {"training": "Concierge & Service",      "group": 1},
+    "LW0gk8zC": {"training": "Forecasting",              "group": 1},
+    "gMAvzoOI": {"training": "LIXIL Pro",                "group": 1},
+    "tGMZoIJK": {"training": "Highspot 2",               "group": 1},
+    "K39z6Tfi": {"training": "Adding Value to Showroom", "group": 1},
+    "AXB6gX5C": {"training": "Salesforce",               "group": 2},
+    "YQ2HR43W": {"training": "Tableau",                  "group": 2},
+    "K1GKMBWa": {"training": "Quoting",                  "group": 2},
+    "fwTGsQbc": {"training": "Customer Care & BP",       "group": 2},
+    "OHOz9gSO": {"training": "Pricing/RGAs",             "group": 2},
+    "LjocCTQm": {"training": "Highspot 1",               "group": 2},
+    "oOl3VGUn": {"training": "AS Faucets & Kitchen",     "group": 2},
+    "ZJCKZanE": {"training": "AS Commercial 1",          "group": 2},
+    "tmhIYwwI": {"training": "AS Commercial 2",          "group": 2},
+    "hfg5g3bx": {"training": "AS Showering",             "group": 2},
     "QBuj7Z0B": {"training": "Loyalty Programs & Ansira","group": 2},
-    "fcMuvrfw": {"training": "GROHE Showering",         "group": 2},
-    "x2DR6sj4": {"training": "GROHE Faucets & Ceramics","group": 2},
-    "UTkhq2NE": {"training": "GROHE Kitchen",           "group": 2},
-    "o767iMMc": {"training": "AS Toilets",              "group": 2},
-    "ZUcnzhx1": {"training": "Forecasting",             "group": 2},
-    "W8OuN0le": {"training": "Success w/ Customers",    "group": 2},
-    "Ie0bENbr": {"training": "Concierge & Service",     "group": 2},
-    "TG5Bs2hL": {"training": "LIXIL Pro",               "group": 2},
+    "fcMuvrfw": {"training": "GROHE Showering",          "group": 2},
+    "x2DR6sj4": {"training": "GROHE Faucets & Ceramics", "group": 2},
+    "UTkhq2NE": {"training": "GROHE Kitchen",            "group": 2},
+    "o767iMMc": {"training": "AS Toilets",               "group": 2},
+    "ZUcnzhx1": {"training": "Forecasting",              "group": 2},
+    "W8OuN0le": {"training": "Success w/ Customers",     "group": 2},
+    "Ie0bENbr": {"training": "Concierge & Service",      "group": 2},
+    "TG5Bs2hL": {"training": "LIXIL Pro",                "group": 2},
     "DuXp5OwS": {"training": "Loyalty Programs & Ansira","group": 2},
-    "uGvCEqGH": {"training": "DXV Product Overview",    "group": 2},
-    "NRBc4lkA": {"training": "Adding Value to Showroom","group": 2},
-    "bMNZDEy7": {"training": "Highspot 2",              "group": 2},
-    "CoH24ULg": {"training": "Display Management",      "group": 2},
-    # group=0: shared/office hours sessions — used for attendance only
-    "IyWdAb5U": {"training": "Quoting",                 "group": 0},
+    "uGvCEqGH": {"training": "DXV Product Overview",     "group": 2},
+    "NRBc4lkA": {"training": "Adding Value to Showroom", "group": 2},
+    "bMNZDEy7": {"training": "Highspot 2",               "group": 2},
+    "CoH24ULg": {"training": "Display Management",       "group": 2},
+    "IyWdAb5U": {"training": "Quoting",                  "group": 0},
 }
 
 AGENCY_ALIASES = {
-    "big rivers": "Big Rivers",
-    "cathell naylor": "Cathell Naylor",
-    "elmco associates": "Elmco Associates",
-    "elmco stewart": "Elmco Stewart",
+    "big rivers": "Big Rivers", "cathell naylor": "Cathell Naylor",
+    "elmco associates": "Elmco Associates", "elmco stewart": "Elmco Stewart",
     "harry warren - florida": "Harry Warren - Florida",
     "harry warren florida": "Harry Warren - Florida",
     "harry warren fl": "Harry Warren - Florida",
     "harry warren - georgia": "Harry Warren - Georgia",
     "harry warren georgia": "Harry Warren - Georgia",
     "harry warren ga": "Harry Warren - Georgia",
-    "mid america": "Mid America",
-    "mmi": "MMI",
-    "next luxury": "Next Luxury",
-    "norpac": "NorPac",
-    "pepco": "Pepco",
-    "ranvier": "Ranvier",
-    "rep source": "Rep Source",
-    "rep south": "Rep South",
-    "rkr": "RKR",
+    "mid america": "Mid America", "mmi": "MMI", "next luxury": "Next Luxury",
+    "norpac": "NorPac", "pepco": "Pepco", "ranvier": "Ranvier",
+    "rep source": "Rep Source", "rep south": "Rep South", "rkr": "RKR",
 }
 
-# ── Typeform API helpers ───────────────────────────────────────────────────────
 def tf_headers():
     return {"Authorization": f"Bearer {TYPEFORM_TOKEN}"}
 
 def get_form_responses(form_id):
-    """Fetch ALL completed responses from a form (handles pagination)."""
     url = f"https://api.typeform.com/forms/{form_id}/responses"
     items = []
     before = None
@@ -128,18 +109,32 @@ def get_form_responses(form_id):
         before = batch[-1]["token"]
     return items
 
-# ── Parsing ────────────────────────────────────────────────────────────────────
+def debug_first_response(form_id):
+    """Print field titles from first response to diagnose parsing issues."""
+    r = requests.get(f"https://api.typeform.com/forms/{form_id}/responses",
+                     headers=tf_headers(), params={"page_size": 1, "completed": "true"}, timeout=30)
+    data = r.json()
+    items = data.get("items", [])
+    if not items:
+        print("  (no responses)")
+        return
+    print("  Field titles in first response:")
+    for ans in items[0].get("answers", []):
+        field = ans.get("field", {})
+        print(f"    type={ans.get('type')!r:15} title={field.get('title')!r}")
+
 def extract_name_agency(response):
     name = agency = None
     for ans in response.get("answers", []):
         title = ans.get("field", {}).get("title", "").lower()
         atype = ans.get("type", "")
         if "name" in title:
-            name = (ans.get("text") or "").strip()
-        elif "agency" in title:
+            if atype == "text":
+                name = (ans.get("text") or "").strip()
+        elif "agency" in title or "rep " in title or "company" in title:
             if atype == "choice":
                 agency = ans.get("choice", {}).get("label", "").strip()
-            else:
+            elif atype == "text":
                 agency = (ans.get("text") or "").strip()
     return name, agency
 
@@ -149,55 +144,44 @@ def norm_name(n):
 def norm_agency(a):
     return AGENCY_ALIASES.get((a or "").lower().strip(), a or "Other")
 
-# ── Build ROWS ─────────────────────────────────────────────────────────────────
 def build_rows():
-    participants = {}  # norm_name → {name, agency, group, attended: set}
-
+    participants = {}
+    debug_done = False
     for form_id, mapping in FORM_MAPPING.items():
         training = mapping["training"]
         form_group = mapping["group"]
         print(f"  Fetching {form_id}: {training} (G{form_group})")
         responses = get_form_responses(form_id)
         print(f"    → {len(responses)} responses")
-
+        if not debug_done and responses:
+            print(f"  DEBUG field titles for {form_id}:")
+            debug_first_response(form_id)
+            debug_done = True
         for resp in responses:
             name, agency = extract_name_agency(resp)
             if not name:
                 continue
             nn = norm_name(name)
             agency = norm_agency(agency)
-
             if nn not in participants:
-                participants[nn] = {
-                    "name": name,
-                    "agency": agency,
-                    "group": form_group if form_group > 0 else 0,
-                    "attended": set(),
-                }
+                participants[nn] = {"name": name, "agency": agency,
+                                    "group": form_group if form_group > 0 else 0,
+                                    "attended": set()}
             else:
                 p = participants[nn]
-                # Assign group from first group-specific form seen
                 if p["group"] == 0 and form_group > 0:
                     p["group"] = form_group
-                # Keep non-"Other" agency
                 if agency != "Other" and (not p["agency"] or p["agency"] == "Other"):
                     p["agency"] = agency
-
             if training in TRAININGS:
                 participants[nn]["attended"].add(training)
-
     rows = []
     for p in participants.values():
         attended = sorted(p["attended"], key=lambda t: TRAININGS.index(t))
         pct = round(len(attended) / len(TRAININGS) * 100)
-        rows.append({
-            "agency": p["agency"],
-            "name": p["name"],
-            "group": p["group"] if p["group"] > 0 else 1,
-            "attended": attended,
-            "pct": pct,
-        })
-
+        rows.append({"agency": p["agency"], "name": p["name"],
+                     "group": p["group"] if p["group"] > 0 else 1,
+                     "attended": attended, "pct": pct})
     rows.sort(key=lambda r: (r["agency"], r["name"]))
     return rows
 
@@ -209,14 +193,10 @@ def build_summary(rows):
             stats[ag] = {"count": 0, "total_pct": 0}
         stats[ag]["count"] += 1
         stats[ag]["total_pct"] += r["pct"]
-    return {
-        ag: {"count": v["count"], "pct": round(v["total_pct"] / v["count"])}
-        for ag, v in sorted(stats.items())
-    }
+    return {ag: {"count": v["count"], "pct": round(v["total_pct"] / v["count"])}
+            for ag, v in sorted(stats.items())}
 
-# ── HTML update ────────────────────────────────────────────────────────────────
 def find_const_end(content, start_pos):
-    """Find the end of a JS const assignment starting at start_pos."""
     open_ch = content[start_pos]
     close_ch = "]" if open_ch == "[" else "}"
     depth = 0
@@ -226,18 +206,13 @@ def find_const_end(content, start_pos):
     i = start_pos
     while i < len(content):
         c = content[i]
-        if esc:
-            esc = False
-        elif c == "\\" and in_str:
-            esc = True
+        if esc: esc = False
+        elif c == "\\" and in_str: esc = True
         elif in_str:
-            if c == str_ch:
-                in_str = False
+            if c == str_ch: in_str = False
         elif c in ('"', "'", "`"):
-            in_str = True
-            str_ch = c
-        elif c == open_ch:
-            depth += 1
+            in_str = True; str_ch = c
+        elif c == open_ch: depth += 1
         elif c == close_ch:
             depth -= 1
             if depth == 0:
@@ -262,21 +237,15 @@ def update_html(rows, summary):
     html_path = os.path.join(os.path.dirname(__file__), "..", "index.html")
     with open(html_path, "r", encoding="utf-8") as f:
         content = f.read()
-
-    content = replace_js_const(content, "ROWS",    json.dumps(rows, ensure_ascii=False))
+    content = replace_js_const(content, "ROWS", json.dumps(rows, ensure_ascii=False))
     content = replace_js_const(content, "SUMMARY", json.dumps(summary, ensure_ascii=False))
-
-    # Update timestamp
     now = datetime.now(timezone.utc)
     ts = f"{now.strftime('%B')} {now.day}, {now.strftime('%Y')} at {now.strftime('%I:%M %p').lstrip('0')}"
     content = re.sub(r"Last updated:.*?(?=</span>)", f"Last updated: {ts}", content)
-
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(content)
-
     print(f"✓ index.html updated: {len(rows)} participants, {len(summary)} agencies")
 
-# ── Main ───────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     print("Fetching Typeform responses...")
     rows = build_rows()
