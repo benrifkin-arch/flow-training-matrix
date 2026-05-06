@@ -213,6 +213,7 @@ NAME_FIXES = {
 
 # Participants to exclude entirely: set of (normalized_agency, normalized_name)
 EXCLUSIONS = {
+    ("other", "walter pitsch"),
     ("rep south", "joey wolter"),
     ("rkr", "ben rifkin"),
     ("rkr", "allison lorelli"),
