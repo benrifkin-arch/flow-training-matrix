@@ -21,6 +21,7 @@ TRAININGS = [
     "Loyalty Programs & Ansira", "Highspot 2", "LIXIL Pro",
     "Forecasting", "Concierge & Service", "Adding Value to Showroom",
     "FLOW Wrap Up",
+    "In Person Training",
 ]
 
 FORM_MAPPING = {
@@ -70,6 +71,7 @@ FORM_MAPPING = {
     "bMNZDEy7": {"training": "Highspot 2",               "group": 2},
     "CoH24ULg": {"training": "Display Management",       "group": 2},
     "IyWdAb5U": {"training": "Quoting",                  "group": 0},
+    "DXHSQBd7": {"training": "In Person Training",       "group": 0},
 }
 
 AGENCY_ALIASES = {
