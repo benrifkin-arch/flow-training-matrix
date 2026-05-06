@@ -132,7 +132,7 @@ def get_form_responses(form_id):
     return items
 
 def extract_name_agency(response, field_map):
-    name = agency = None
+    name = agency = email = None
     for ans in response.get("answers", []):
         field_id = ans.get("field", {}).get("id", "")
         title = field_map.get(field_id, "").lower()
@@ -143,10 +143,12 @@ def extract_name_agency(response, field_map):
                 agency = ans.get("choice", {}).get("label", "").strip()
             elif atype == "text":
                 agency = (ans.get("text") or "").strip()
+        elif atype == "email" or "email" in title:
+            email = (ans.get("email") or ans.get("text") or "").strip().lower()
         elif "name" in title:
             if atype == "text":
                 name = (ans.get("text") or "").strip()
-    return name, agency
+    return name, agency, email
 
 def norm_name(n):
     return " ".join((n or "").lower().split())
@@ -171,23 +173,28 @@ def build_rows():
             debug_done = True
 
         for resp in responses:
-            name, agency = extract_name_agency(resp, field_map)
+            name, agency, email = extract_name_agency(resp, field_map)
             if not name:
                 continue
             nn = norm_name(name)
             agency = norm_agency(agency)
-            if nn not in participants:
-                participants[nn] = {"name": name, "agency": agency,
-                                    "group": form_group if form_group > 0 else 0,
-                                    "attended": set()}
+            # Use email as primary dedup key, fall back to normalized name
+            key = email if email else nn
+            if key not in participants:
+                participants[key] = {"name": name, "agency": agency,
+                                     "group": form_group if form_group > 0 else 0,
+                                     "attended": set()}
             else:
-                p = participants[nn]
+                p = participants[key]
+                # Keep the longest/most complete name
+                if len(name) > len(p["name"]):
+                    p["name"] = name
                 if p["group"] == 0 and form_group > 0:
                     p["group"] = form_group
                 if agency != "Other" and (not p["agency"] or p["agency"] == "Other"):
                     p["agency"] = agency
             if training in TRAININGS:
-                participants[nn]["attended"].add(training)
+                participants[key]["attended"].add(training)
     rows = []
     for p in participants.values():
         attended = sorted(p["attended"], key=lambda t: TRAININGS.index(t))
