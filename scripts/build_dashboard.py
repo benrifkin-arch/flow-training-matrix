@@ -20,7 +20,6 @@ TRAININGS = [
     "GROHE Showering", "GROHE Kitchen", "Display Management",
     "Loyalty Programs & Ansira", "Highspot 2", "LIXIL Pro",
     "Forecasting", "Concierge & Service", "Adding Value to Showroom",
-    "FLOW Wrap Up",
     "In Person Training",
 ]
 
