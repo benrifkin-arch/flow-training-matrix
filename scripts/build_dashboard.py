@@ -195,8 +195,31 @@ def build_rows():
                     p["agency"] = agency
             if training in TRAININGS:
                 participants[key]["attended"].add(training)
-    rows = []
+    # Second-pass merge: collapse entries with same normalized name + agency
+    # (handles cases where same person used email on one form, not on another)
+    import unicodedata
+    def norm_merge(n):
+        # strip punctuation, lowercase, collapse whitespace
+        n = unicodedata.normalize("NFKD", n.lower())
+        n = re.sub(r"[^a-z0-9 ]", "", n)
+        return " ".join(n.split())
+
+    merged = {}
     for p in participants.values():
+        mk = (p["agency"], norm_merge(p["name"]))
+        if mk not in merged:
+            merged[mk] = dict(p)
+            merged[mk]["attended"] = set(p["attended"])
+        else:
+            m = merged[mk]
+            m["attended"].update(p["attended"])
+            if len(p["name"]) > len(m["name"]):
+                m["name"] = p["name"]
+            if p["group"] != 0 and m["group"] == 0:
+                m["group"] = p["group"]
+
+    rows = []
+    for p in merged.values():
         attended = sorted(p["attended"], key=lambda t: TRAININGS.index(t))
         pct = round(len(attended) / len(TRAININGS) * 100)
         rows.append({"agency": p["agency"], "name": p["name"],
