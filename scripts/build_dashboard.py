@@ -250,6 +250,7 @@ def update_html(rows, summary):
     html_path = os.path.join(os.path.dirname(__file__), "..", "index.html")
     with open(html_path, "r", encoding="utf-8") as f:
         content = f.read()
+    content = replace_js_const(content, "TRAININGS", json.dumps(TRAININGS, ensure_ascii=False))
     content = replace_js_const(content, "ROWS", json.dumps(rows, ensure_ascii=False))
     content = replace_js_const(content, "SUMMARY", json.dumps(summary, ensure_ascii=False))
     now = datetime.now(timezone.utc)
