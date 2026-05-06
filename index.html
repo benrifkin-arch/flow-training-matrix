@@ -457,7 +457,8 @@ if (_urlAgency) {
   agencySelect.style.display = 'none';
 
   // Filter rows to this agency only
-  const filtered = ROWS.filter(r => r.agency === _urlAgency);
+  const normAg = s => s.toLowerCase().replace(/\s+/g, '');
+  const filtered = ROWS.filter(r => normAg(r.agency) === normAg(_urlAgency));
   buildBody(filtered);
 
   // Recompute summary cards for this agency only

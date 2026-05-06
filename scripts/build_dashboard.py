@@ -156,6 +156,78 @@ def norm_name(n):
 def norm_agency(a):
     return AGENCY_ALIASES.get((a or "").lower().strip(), a or "Other")
 
+
+# Canonical name corrections: {normalized_agency: {normalized_name: canonical}}
+NAME_FIXES = {
+    "cathell naylor": {
+        "diane grant": "Mary Canipe",
+        "diane grant - mary canipe": "Mary Canipe",
+        "peter thomas": "Pete Thomas",
+    },
+    "elmco associates": {
+        "faye.duarte@elmcoassoc.com": "Faye Duarte",
+        "tony gonzale": "Tony Gonzalez",
+    },
+    "elmco stewart": {
+        "chad c": "Chad St.Clair",
+        "mark lanes": "Mark Lane",
+        "cindy": "Cindy Lozano",
+        "rick": "Rick Curtis",
+    },
+    "harry warren - florida": {
+        "kim kent": "Kimberly Kent",
+        "wes reinhart": "Wesley Reinert",
+        "wes reinert": "Wesley Reinert",
+        "whitney": "Whitney Morgan",
+    },
+    "mmi": {
+        "areeves@mmirep.com": "Andy Reeves",
+    },
+    "next luxury": {
+        "margaret vernon": "Marge Vernon",
+        "patrick": "Patrick Manna",
+    },
+    "norpac": {
+        "chris box-norpac": "Chris Box",
+    },
+    "pepco": {
+        "louie steed": "Louis Steed",
+        "rob black": "Rob Black",
+        "matthew lofland": "Matt Lofland",
+        "michael guevara l": "Michael Guevara",
+        "michael guevara i": "Michael Guevara",
+        "scotty wallingford zzz": "Scotty Wallingford",
+    },
+    "ranvier": {
+        "victoria hutching": "Victoria Hutchings",
+        "david": "David Hall",
+    },
+    "rep source": {
+        "r.j. nelson": "RJ Nelson",
+    },
+    "rkr": {
+        "todd fellowes": "Todd Fellows",
+        "curtis": "Curtis Ridge",
+    },
+}
+
+# Participants to exclude entirely: set of (normalized_agency, normalized_name)
+EXCLUSIONS = {
+    ("rep south", "joey wolter"),
+    ("rkr", "ben rifkin"),
+    ("rkr", "allison lorelli"),
+    ("rkr", "amie milano"),
+}
+
+def apply_name_fix(name, agency):
+    """Return canonical name if a fix rule matches, else original."""
+    agency_fixes = NAME_FIXES.get(agency.lower())
+    if agency_fixes:
+        nn = norm_name(name)
+        if nn in agency_fixes:
+            return agency_fixes[nn]
+    return name
+
 def build_rows():
     participants = {}
     debug_done = False
@@ -176,8 +248,12 @@ def build_rows():
             name, agency, email = extract_name_agency(resp, field_map)
             if not name:
                 continue
-            nn = norm_name(name)
             agency = norm_agency(agency)
+            name = apply_name_fix(name, agency)
+            nn = norm_name(name)
+            # Skip excluded participants
+            if (agency.lower(), nn) in EXCLUSIONS:
+                continue
             # Use email as primary dedup key, fall back to normalized name
             key = email if email else nn
             if key not in participants:
