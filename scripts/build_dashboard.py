@@ -220,6 +220,11 @@ EXCLUSIONS = {
     ("rkr", "amie milano"),
 }
 
+# Agency overrides: {normalized_name: correct_agency} — for reps who selected wrong agency in form
+AGENCY_OVERRIDES = {
+    "mark lane": "Elmco Stewart",
+}
+
 def apply_name_fix(name, agency):
     """Return canonical name if a fix rule matches, else original."""
     agency_fixes = NAME_FIXES.get(agency.lower())
@@ -252,6 +257,10 @@ def build_rows():
             agency = norm_agency(agency)
             name = apply_name_fix(name, agency)
             nn = norm_name(name)
+            # Apply agency overrides
+            agency_override = AGENCY_OVERRIDES.get(nn)
+            if agency_override:
+                agency = agency_override
             # Skip excluded participants
             if (agency.lower(), nn) in EXCLUSIONS:
                 continue
