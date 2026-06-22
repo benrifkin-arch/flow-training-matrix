@@ -166,6 +166,7 @@ NAME_FIXES = {
     "elmco associates": {
         "faye.duarte@elmcoassoc.com": "Faye Duarte",
         "tony gonzale": "Tony Gonzalez",
+        "rick mesnickow": "Frank Mesnickow",
     },
     "elmco stewart": {
         "chad c": "Chad St.Clair",
